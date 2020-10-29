@@ -1,0 +1,243 @@
+
+<!doctype html>
+
+<body>
+    <div id="container"></div>
+
+
+    <script src="https://threejs.org/build/three.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+
+    <script id="vertexShader" type="x-shader/x-vertex">
+      
+                uniform float u_time;
+        void main() {
+              
+                  gl_Position = projectionMatrix *
+                modelViewMatrix *
+                vec4(position.x,position.y,position.z,1.0);
+        }
+    </script>
+  
+   
+    <script id="fragmentShader" type="x-shader/x-fragment">
+      uniform vec2 u_resolution;
+      uniform float u_time;
+
+      #define PI 3.14159265358979323846
+
+      vec2 rotate2D(vec2 _st, float _angle){
+          _st -= 0.5;
+          _st =  mat2(cos(_angle),-sin(_angle),
+                      sin(_angle),cos(_angle)) * _st;
+          _st += 0.5;
+          return _st;
+      }
+
+      vec2 tile(vec2 _st, float _zoom){
+          _st *= _zoom;
+          return fract(_st);
+      }
+
+      float box(vec2 _st, vec2 _size, float _smoothEdges){
+          _size = vec2(0.5)*sin(u_time/2.0)+1.0-_size*0.5;
+          //_size = vec2(-0.5)+1.0-_size*0.5;
+          vec2 aa = vec2(_smoothEdges*0.5);
+
+
+          //Makes the step noiser and larger smaller with time and at random to get weird
+          //block effects. 
+
+
+
+          vec2 uv = smoothstep(_size,_size+aa,_st);
+          uv *= smoothstep(_size,_size+aa,vec2(1.0)-_st);
+          return uv.x*uv.y;
+      }
+
+      void main(void){
+          vec2 st = gl_FragCoord.xy/u_resolution.xy;
+          vec3 color = vec3(0.0);
+
+          // Divide the space in 4
+          st = tile(st,4.);
+
+          // Use a matrix to rotate the space 45 degrees
+          //st = rotate2D(st,sin(u_time)*PI*0.15);
+
+          // Draw a square
+          color = vec3(box(st,vec2(0.5),0.01));
+          // color = vec3(st,0.0);
+
+          gl_FragColor = vec4(color,1.0);
+      }
+    </script>
+
+<!--         <script id="fragmentShader" type="x-shader/x-fragment">
+        uniform vec2 u_resolution;
+        uniform float u_time;
+
+        void main() {
+            vec2 st = gl_FragCoord.xy/u_resolution.xy;
+            gl_FragColor=vec4(st.x,st.y,sin(u_time/60.0),1.0);
+        }
+    </script> -->
+  
+
+
+
+
+
+
+  
+
+  
+  
+</body>
+
+
+
+    <script type="text/javascript">
+
+
+//Ideas. Go grayscale by clamping the color shader. 
+//Create a spiral of deforming grayscale balls. 
+//Figure out how to create a spiral. 
+//Study the class js. 
+//Figure pulsating ball. 
+//Figure out how to load in a model. 
+
+
+//Create a house with rain and a chair inside the house. 
+//Possibly due w/o modeling?
+//Create a rain effect using a particle engine?
+
+
+// Create a scene which will hold all our meshes to be rendered
+var scene = new THREE.Scene();
+
+
+// Create and position a camera
+var camera = new THREE.PerspectiveCamera(
+    60,                                   // Field of view
+    window.innerWidth/window.innerHeight, // Aspect ratio
+    0.1,                                  // Near clipping pane
+    1000                                  // Far clipping pane
+);
+
+// Reposition the camera
+camera.position.set(0,2,0);
+
+// Point the camera at a given coordinate
+camera.lookAt(new THREE.Vector3(0,0,0));
+
+// Create a renderer
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+
+// Size should be the same as the window
+renderer.setSize( window.innerWidth, window.innerHeight );
+
+// Set a near white clear color (default is black)
+renderer.setClearColor( 0xeff6e6 );
+
+// Append to the document
+document.body.appendChild( renderer.domElement );
+
+  uniforms = {
+                u_time: { type: "f", value: 1.0 },
+                u_resolution: { type: "v2", value: new THREE.Vector2() },
+                u_mouse: { type: "v2", value: new THREE.Vector2() }
+            };
+
+var material = new THREE.ShaderMaterial( {
+    uniforms: uniforms,
+    vertexShader: document.getElementById( 'vertexShader' ).textContent,
+    fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+} );
+
+           
+  // var material = new THREE.MeshBasicMaterial( { color: 0x393439, wireframe: false } )
+
+
+    var mymaterial = new THREE.MeshStandardMaterial( {
+            color: 0xf8db08,
+            //shading: THREE.FlatShading ,
+            metalness: 0,
+            roughness: 0.8,
+            refractionRatio: 0.25
+
+        } )
+
+
+
+// A mesh is created from the geometry and material, then added to the scene
+var plane = new THREE.Mesh(
+    new THREE.PlaneGeometry( 6, 6, 5, 5 ),
+    material );
+
+
+var plane2 = new THREE.Mesh(
+    new THREE.PlaneGeometry( 6, 6, 5, 5 ),
+    material );
+
+plane.rotateX(Math.PI/2);
+plane.rotateY(Math.PI);
+plane2.rotateX(Math.PI/2);
+plane2.rotateY(Math.PI);
+plane2.z = plane.z + 2.0;
+
+scene.add( plane );
+scene.add( plane2 );
+
+
+
+
+// Add an orbit control which allows us to move around the scene. See the three.js example for more details
+// https://github.com/mrdoob/three.js/blob/dev/examples/js/controls/OrbitControls.
+var controls = new THREE.OrbitControls( camera, renderer.domElement );
+controls.addEventListener( 'change', function() { renderer.render(scene, camera); } ); // add this only if there is no animation loop (requestAnimationFrame)
+onWindowResize();
+            window.addEventListener( 'resize', onWindowResize, false );
+
+
+
+
+
+requestAnimationFrame(render);
+
+
+function onWindowResize( event ) {
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  uniforms.u_resolution.value.x = renderer.domElement.width;
+  uniforms.u_resolution.value.y = renderer.domElement.height;
+}
+
+
+function render() {
+
+    controls.update();
+
+    uniforms.u_time.value += 0.05;
+
+    plane.rotateZ(Math.PI/2 *(uniforms.u_time.value * .00001));
+
+
+    // if ((uniforms.u_time.value % 1.0) < .01){
+    //   console.log(uniforms.u_time.value);
+    //   k = k + 1
+    //   if (k < balls_total){
+    //   scene.remove(colorball_array[k]);
+    //   }
+    //  }
+    
+    // Render the scene/camera combnation
+    renderer.render(scene, camera);
+
+    // Repeat
+    requestAnimationFrame(render);
+}
+
+
+
+    </script>
+</html>
